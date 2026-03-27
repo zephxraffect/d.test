@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webhook Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface3: #1c1c1c;
+  --border: #222222;
+  --border2: #2e2e2e;
+  --text: #e8e8e8;
+  --text2: #888888;
+  --text3: #555555;
+  --red: #cc2222;
+  --red-hover: #e02020;
+  --white-btn: #efefef;
+  --radius: 6px;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; }
+
+.app {
+  display: grid;
+  grid-template-columns: 35% 65%;
+  grid-template-rows: 53px 1fr;
+  min-height: 100vh;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  grid-row: 1 / 3;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-logo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.logo-icon {
+  width: 28px; height: 28px;
+  background: var(--surface3); border: 1px solid var(--border2);
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+}
+.logo-icon svg { fill: var(--text3); width: 16px; height: 16px; }
+.sidebar-logo span { font-size: 13px; font-weight: 600; color: var(--text2); }
+
+.url-section { padding: 14px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.url-section input {
+  width: 100%; background: var(--surface3); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text); font-family: inherit;
+  font-size: 12px; padding: 8px 11px; outline: none; transition: border-color 0.15s; margin-bottom: 8px;
+}
+.url-section input:focus { border-color: var(--border2); }
+.url-section input::placeholder { color: var(--text3); }
+
+.btn-connect {
+  width: 100%; background: var(--white-btn); color: #0a0a0a;
+  border: none; border-radius: var(--radius);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  padding: 8px; cursor: pointer; transition: background 0.12s, opacity 0.12s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-connect:hover { background: #fff; }
+.btn-connect:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.status-row {
+  display: flex; align-items: center; gap: 7px;
+  padding: 10px 14px; font-size: 11px; color: var(--text3); flex-shrink: 0;
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+.dot.on { background: #3ba55c; box-shadow: 0 0 5px rgba(59,165,92,0.5); }
+
+.nav { display: flex; flex-direction: column; gap: 1px; padding: 8px; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: var(--radius);
+  border: none; background: transparent; color: var(--text2);
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer; text-align: left; width: 100%;
+  transition: background 0.1s, color 0.1s;
+}
+.nav-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.5; stroke: currentColor; fill: none; }
+.nav-item:hover { background: var(--surface3); color: var(--text); }
+.nav-item:hover svg { opacity: 0.85; }
+.nav-item.active { background: var(--surface3); color: var(--text); }
+.nav-item.active svg { opacity: 1; }
+.nav-item.red { color: #883333; }
+.nav-item.red:hover, .nav-item.red.active { background: rgba(204,34,34,0.1); color: var(--red-hover); }
+.nav-sep { height: 1px; background: var(--border); margin: 6px 4px; }
+
+/* ── Topbar ── */
+.topbar {
+  display: flex; align-items: center; padding: 0 24px;
+  border-bottom: 1px solid var(--border); background: var(--bg);
+}
+.topbar-title { font-size: 13px; font-weight: 600; color: var(--text); }
+
+/* ── Main ── */
+.main { background: var(--bg); padding: 24px; overflow-y: auto; }
+
+.panel { display: none; max-width: 620px; }
+.panel.active { display: block; }
+
+/* Alert */
+.alert {
+  display: none; align-items: center; gap: 9px;
+  padding: 10px 13px; border-radius: var(--radius);
+  font-size: 12px; font-weight: 500; margin-bottom: 18px;
+}
+.alert.show { display: flex; animation: fd 0.18s ease; }
+.alert.success { background: rgba(59,165,92,0.1); border: 1px solid rgba(59,165,92,0.25); color: #3ba55c; }
+.alert.error   { background: rgba(204,34,34,0.1);  border: 1px solid rgba(204,34,34,0.25);  color: #cc6666; }
+.alert.warning { background: rgba(187,136,0,0.1);  border: 1px solid rgba(187,136,0,0.25);  color: #bb8800; }
+@keyframes fd { from { opacity:0; transform: translateY(-4px); } to { opacity:1; transform: translateY(0); } }
+
+/* Info */
+.info-hero {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px; margin-bottom: 14px;
+}
+.av {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--surface3); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: var(--text2);
+  overflow: hidden; flex-shrink: 0;
+}
+.av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.av-name { font-size: 15px; font-weight: 700; }
+.av-connected { font-size: 11px; color: #3ba55c; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+.av-connected::before { content:''; width:5px; height:5px; background:#3ba55c; border-radius:50%; }
+
+.info-rows { display: flex; flex-direction: column; gap: 2px; }
+.info-row {
+  display: flex; align-items: baseline;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 11px 16px; gap: 12px;
+}
+.ir-label { font-size: 11px; font-weight: 600; color: var(--text3); width: 90px; flex-shrink: 0; letter-spacing: 0.3px; }
+.ir-val { font-size: 13px; color: var(--text); word-break: break-all; }
+.ir-val.mono { font-family: 'Courier New', monospace; font-size: 12px; color: var(--text2); }
+
+.empty {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 70px 20px; color: var(--text3); text-align: center; gap: 6px;
+}
+.empty svg { width: 34px; height: 34px; opacity: 0.25; stroke: currentColor; fill: none; margin-bottom: 6px; }
+.empty strong { color: var(--text2); font-size: 14px; }
+
+/* Form */
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 11px; font-weight: 600; color: var(--text3); margin-bottom: 5px; letter-spacing: 0.3px; text-transform: uppercase; }
+.field input, .field textarea {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text); font-family: inherit;
+  font-size: 13px; padding: 9px 12px; outline: none; transition: border-color 0.15s;
+}
+
+.field textarea { resize: vertical; min-height: 80px; line-height: 1.55; }
+.field input:focus, .field textarea:focus { border-color: var(--border2); }
+.field input::placeholder, .field textarea::placeholder { color: var(--text3); }
+.field-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.cc { font-size: 10px; color: var(--text3); text-align: right; margin-top: 3px; }
+.cc.warn { color: #bb8800; } .cc.over { color: var(--red); }
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; border-radius: var(--radius);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; padding: 9px 18px; transition: all 0.1s; white-space: nowrap;
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn-w { background: var(--white-btn); color: #0a0a0a; }
+.btn-w:hover:not(:disabled) { background: #fff; }
+.btn-g { background: var(--surface); color: var(--text2); border: 1px solid var(--border); }
+.btn-g:hover:not(:disabled) { border-color: var(--border2); color: var(--text); }
+.btn-r { background: var(--red); color: white; }
+.btn-r:hover:not(:disabled) { background: var(--red-hover); }
+.btn-row { display: flex; gap: 8px; margin-top: 16px; }
+
+/* Msg sub-tabs */
+.msg-tabs {
+  display: flex;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 3px; margin-bottom: 16px; width: fit-content;
+}
+.mt {
+  padding: 6px 16px; border-radius: 4px;
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  color: var(--text3); background: transparent; border: none; cursor: pointer; transition: all 0.1s;
+}
+.mt.active { background: var(--surface3); color: var(--text); }
+
+/* TTS toggle */
+.tts-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 9px 13px; cursor: pointer;
+}
+.tts-label { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text2); }
+.tts-label svg { width: 14px; height: 14px; stroke: currentColor; fill: none; opacity: 0.6; }
+.tog {
+  width: 34px; height: 20px; border-radius: 20px;
+  background: var(--surface3); border: 1px solid var(--border2);
+  position: relative; transition: background 0.18s; flex-shrink: 0;
+}
+.tog.on { background: #3ba55c; border-color: #3ba55c; }
+.tog::after {
+  content:''; position: absolute; width: 14px; height: 14px; border-radius: 50%;
+  background: var(--text3); top: 2px; left: 2px; transition: transform 0.18s, background 0.18s;
+}
+.tog.on::after { transform: translateX(14px); background: white; }
+
+/* Color */
+.color-row { display: flex; gap: 8px; align-items: center; }
+.color-row input[type="color"] {
+  width: 36px; height: 36px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--surface);
+  padding: 2px; cursor: pointer; flex-shrink: 0;
+}
+.color-row input[type="text"] { flex: 1; }
+
+/* Embed preview */
+.ep {
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 4px solid #5865f2;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 12px 14px; margin-top: 12px;
+}
+.ep-t { font-weight: 700; font-size: 13px; color: #c9d1f5; margin-bottom: 5px; }
+.ep-d { font-size: 12px; color: var(--text2); line-height: 1.5; white-space: pre-wrap; }
+
+/* Repeat panel */
+.repeat-status {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 16px;
+  font-size: 12px; color: var(--text3);
+}
+.repeat-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text3); flex-shrink: 0;
+  transition: background 0.3s;
+}
+.repeat-dot.running {
+  background: #3ba55c;
+  box-shadow: 0 0 6px rgba(59,165,92,0.6);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+#repeatCountLabel { margin-left: auto; font-size: 11px; color: var(--text3); font-family: 'Courier New', monospace; }
+
+/* Danger — inline confirm */
+.danger-box {
+  background: rgba(204,34,34,0.05); border: 1px solid rgba(204,34,34,0.18);
+  border-radius: var(--radius); padding: 18px;
+}
+.danger-box p { font-size: 13px; color: var(--text2); line-height: 1.65; margin-bottom: 14px; }
+
+.confirm-box {
+  display: none;
+  background: rgba(204,34,34,0.08); border: 1px solid rgba(204,34,34,0.3);
+  border-radius: var(--radius); padding: 16px; margin-top: 14px;
+}
+.confirm-box.show { display: block; animation: fd 0.18s ease; }
+.confirm-box p { font-size: 13px; color: #cc8888; margin-bottom: 12px; line-height: 1.55; }
+.confirm-box .btn-row { margin-top: 0; }
+
+/* Spinner */
+.sp { width: 13px; height: 13px; border: 2px solid rgba(0,0,0,0.15); border-top-color: #0a0a0a; border-radius: 50%; animation: spin 0.55s linear infinite; display: inline-block; }
+.sp.l { border-color: rgba(255,255,255,0.15); border-top-color: white; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M20.317 4.492c-1.53-.69-3.17-1.2-4.885-1.49a.075.075 0 0 0-.079.036c-.21.369-.444.85-.608 1.23a18.566 18.566 0 0 0-5.487 0 12.36 12.36 0 0 0-.617-1.23A.077.077 0 0 0 8.562 3c-1.714.29-3.354.8-4.885 1.491a.07.07 0 0 0-.032.027C.533 9.093-.32 13.555.099 17.961a.08.08 0 0 0 .031.055 20.03 20.03 0 0 0 5.993 2.98.078.078 0 0 0 .084-.026c.462-.62.874-1.275 1.226-1.963.021-.04.001-.088-.041-.104a13.2 13.2 0 0 1-1.872-.878.075.075 0 0 1-.008-.125c.126-.093.252-.19.372-.287a.075.075 0 0 1 .078-.01c3.927 1.764 8.18 1.764 12.061 0a.075.075 0 0 1 .079.009c.12.098.245.195.372.288a.075.075 0 0 1-.006.125c-.598.344-1.22.635-1.873.877a.075.075 0 0 0-.041.105c.36.687.772 1.341 1.225 1.962a.077.077 0 0 0 .084.028 19.963 19.963 0 0 0 6.002-2.981.076.076 0 0 0 .032-.054c.5-5.094-.838-9.52-3.549-13.442a.06.06 0 0 0-.031-.028z"/></svg>
+      </div>
+      <span>Webhook Manager</span>
+    </div>
+
+    <div class="url-section">
+      <input type="url" id="wUrl" placeholder="Paste webhook URL..." spellcheck="false" autocomplete="off">
+      <button class="btn-connect" id="connBtn" onclick="loadWH()">Connect</button>
+    </div>
+
+    <div class="status-row">
+      <div class="dot" id="sDot"></div>
+      <span id="sLabel">Not connected</span>
+    </div>
+
+    <nav class="nav">
+      <!-- Repeat FIRST and default active -->
+      <button class="nav-item" onclick="goTab('info',this)">
+        <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Info
+      </button>
+      <button class="nav-item active" onclick="goTab('repeat',this)">
+        <svg viewBox="0 0 24 24" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Spam
+      </button>
+      <button class="nav-item" onclick="goTab('main',this)">
+        <svg viewBox="0 0 24 24" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Msg
+      </button>
+      <button class="nav-item" onclick="goTab('edit',this)">
+        <svg viewBox="0 0 24 24" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Edit
+      </button>
+      <div class="nav-sep"></div>
+      <button class="nav-item red" onclick="askDelete()">
+        <svg viewBox="0 0 24 24" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        Delete Webhook
+      </button>
+
+      <div class="confirm-box" id="confirmBox">
+          <p>Are you sure you want to permanently delete <strong id="confirmName" style="color:#e8e8e8">this webhook</strong>? You cannot undo this.</p>
+          <div class="btn-row">
+            <button class="btn btn-r" id="confDelBtn" onclick="deleteWH()">Yes, delete it</button>
+            <button class="btn btn-g" onclick="cancelDelete()">Cancel</button>
+          </div>      
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <span class="topbar-title" id="tTitle">Spam</span>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="alert" id="alertBar"><span id="alertMsg"></span></div>
+
+    <!-- REPEAT (default) -->
+    <div class="panel active" id="panel-repeat">
+      <div class="repeat-status">
+        <div class="repeat-dot" id="rDot"></div>
+        <span id="rStatusLabel">Idle</span>
+        <span id="repeatCountLabel">—</span>
+      </div>
+
+      <div class="field">
+        <label>Message</label>
+        <textarea id="rContent" placeholder="Message to spam..." maxlength="2000" oninput="cc('rContent','rCC',2000)"></textarea>
+        <div class="cc" id="rCC">0 / 2000</div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Username override</label>
+          <input type="text" id="rUser" placeholder="Display name" maxlength="80">
+        </div>
+        <div class="field">
+          <label>Avatar URL override</label>
+          <input type="url" id="rAv" placeholder="https://...">
+        </div>
+      </div>
+      <div class="field">
+        <label>Delay (ms)</label>
+        <input type="number" id="rDelay" placeholder="e.g. 300" min="200" step="100" value="300">
+        <div class="field-hint">Minimum 200 ms recommended to avoid rate limits</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-w" id="rStartBtn" onclick="toggleRepeat()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          Start
+        </button>
+        <button class="btn btn-g" onclick="clearRepeat()">Clear</button>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="panel" id="panel-main">
+      <div class="msg-tabs">
+        <button class="mt active" onclick="msgMode('text',this)">Text</button>
+        <button class="mt" onclick="msgMode('embed',this)">Embed</button>
+      </div>
+
+      <div id="m-text">
+        <div class="field">
+          <label>Message</label>
+          <textarea id="mContent" placeholder="Message to send..." maxlength="2000" oninput="cc('mContent','mCC',2000)"></textarea>
+          <div class="cc" id="mCC">0 / 2000</div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Username override</label><input type="text" id="mUser" placeholder="Display name" maxlength="80"></div>
+          <div class="field"><label>Avatar URL override</label><input type="url" id="mAv" placeholder="https://..."></div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <div class="tts-row" onclick="togTTS()">
+            <div class="tts-label">
+              <svg viewBox="0 0 24 24" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+              TTS
+            </div>
+            <div class="tog" id="ttsT"></div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-w" id="sendBtn" onclick="sendText()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+            Send
+          </button>
+          <button class="btn btn-g" onclick="clearText()">Clear</button>
+        </div>
+      </div>
+
+      <div id="m-embed" style="display:none">
+        <div class="row2">
+          <div class="field"><label>Title</label><input type="text" id="eT" placeholder="Embed title..." maxlength="256" oninput="updateEP()"></div>
+          <div class="field">
+            <label>Color</label>
+            <div class="color-row">
+              <input type="color" id="eC" value="#5865f2" oninput="syncColor()">
+              <input type="text" id="eCH" value="#5865f2" maxlength="7" oninput="syncColorHex()">
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <textarea id="eD" placeholder="Embed body..." maxlength="4096" oninput="updateEP(); cc('eD','eDCC',4096)"></textarea>
+          <div class="cc" id="eDCC">0 / 4096</div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Author</label><input type="text" id="eA" placeholder="Author name" maxlength="256"></div>
+          <div class="field"><label>Footer</label><input type="text" id="eF" placeholder="Footer text" maxlength="2048"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Image URL</label><input type="url" id="eI" placeholder="https://..."></div>
+          <div class="field"><label>Username override</label><input type="text" id="eU" placeholder="Display name" maxlength="80"></div>
+        </div>
+        <div class="field"><label>Message above embed</label><input type="text" id="eAb" placeholder="Optional text above..." maxlength="2000"></div>
+        <div class="ep" id="epv">
+          <div class="ep-t" id="epT">Embed Title</div>
+          <div class="ep-d" id="epD">Your description will appear here...</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-w" id="sendEBtn" onclick="sendEmbed()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+            Send Embed
+          </button>
+          <button class="btn btn-g" onclick="clearEmbed()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- INFO -->
+    <div class="panel" id="panel-info">
+      <div id="ie" class="empty">
+        <svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <strong>No webhook connected</strong>
+        <span>Paste a URL in the sidebar and click Connect</span>
+      </div>
+      <div id="ic" style="display:none">
+        <div class="info-hero">
+          <div class="av" id="infoAv"></div>
+          <div>
+            <div class="av-name" id="infoName"></div>
+            <div class="av-connected">Connected</div>
+          </div>
+        </div>
+        <div class="info-rows">
+          <div class="info-row"><span class="ir-label">Name</span><span class="ir-val" id="iName"></span></div>
+          <div class="info-row"><span class="ir-label">Avatar</span><span class="ir-val" id="iAv"></span></div>
+          <div class="info-row"><span class="ir-label">ID</span><span class="ir-val mono" id="iId"></span></div>
+          <div class="info-row"><span class="ir-label">Channel ID</span><span class="ir-val mono" id="iCh"></span></div>
+          <div class="info-row"><span class="ir-label">Guild ID</span><span class="ir-val mono" id="iGu"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT -->
+    <div class="panel" id="panel-edit">
+      <div class="field">
+        <label>New Name</label>
+        <input type="text" id="eName" placeholder="Webhook name..." maxlength="80">
+        <div class="field-hint">2–80 characters</div>
+      </div>
+      <div class="field">
+        <label>New Avatar URL</label>
+        <input type="url" id="eAvUrl" placeholder="https://example.com/avatar.png">
+        <div class="field-hint">Direct link to a PNG, JPG, GIF or WebP image</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-w" id="editBtn" onclick="editWH()">Save Changes</button>
+        <button class="btn btn-g" onclick="resetEdit()">Reset</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+let wh = null, ttsOn = false, msgTab = 'text';
+let repeatTimer = null, repeatRunning = false, repeatCount = 0;
+
+const TABS = { repeat:'Repeat', main:'Main', info:'Info', edit:'Edit', danger:'Delete Webhook' };
+
+function goTab(n, b) {
+  document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  document.getElementById('tTitle').textContent = TABS[n];
+  // Hide confirm box when leaving danger tab
+  if (n !== 'danger') cancelDelete();
+}
+
+function alert_(msg, type='success', ms=4000) {
+  const b = document.getElementById('alertBar');
+  document.getElementById('alertMsg').textContent = msg;
+  b.className = `alert show ${type}`;
+  clearTimeout(b._t);
+  if (ms) b._t = setTimeout(() => b.classList.remove('show'), ms);
+}
+
+function parse(url) {
+  const m = url.match(/discord(?:app)?\.com\/api\/webhooks\/(\d+)\/([^/?#]+)/);
+  return m ? {id:m[1],token:m[2]} : null;
+}
+
+// ── Connect ──────────────────────────────────────────────
+
+async function loadWH() {
+  const url = document.getElementById('wUrl').value.trim();
+  if (!url) { alert_('Paste a webhook URL first.','error'); return; }
+  const p = parse(url);
+  if (!p) { alert_('Invalid webhook URL.','error'); return; }
+  const btn = document.getElementById('connBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="sp" style="border-top-color:#0a0a0a;border-color:rgba(0,0,0,0.12)"></span>';
+  try {
+    const r = await fetch(`https://discord.com/api/webhooks/${p.id}/${p.token}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    wh = await r.json(); wh._url = url;
+    renderInfo();
+    document.getElementById('sDot').className = 'dot on';
+    document.getElementById('sLabel').textContent = wh.name;
+    alert_(`Connected to "${wh.name}"`);
+  } catch(e) { alert_('Failed to connect. Check the URL.','error'); }
+  finally { btn.disabled=false; btn.textContent='Connect'; }
+}
+
+function renderInfo() {
+  document.getElementById('ie').style.display = 'none';
+  document.getElementById('ic').style.display = 'block';
+  const av = document.getElementById('infoAv'); av.innerHTML = '';
+  if (wh.avatar) { const img=document.createElement('img'); img.src=`https://cdn.discordapp.com/avatars/${wh.id}/${wh.avatar}.png?size=128`; av.appendChild(img); }
+  else av.textContent = (wh.name||'?')[0].toUpperCase();
+  document.getElementById('infoName').textContent = wh.name||'—';
+  document.getElementById('iName').textContent = wh.name||'—';
+  document.getElementById('iAv').textContent = wh.avatar ? 'Set' : 'No avatar';
+  document.getElementById('iId').textContent = wh.id||'—';
+  document.getElementById('iCh').textContent = wh.channel_id||'—';
+  document.getElementById('iGu').textContent = wh.guild_id||'—';
+  resetEdit();
+}
+
+// ── Repeat ───────────────────────────────────────────────
+
+function toggleRepeat() {
+  if (repeatRunning) {
+    stopRepeat();
+  } else {
+    startRepeat();
+  }
+}
+
+async function startRepeat() {
+  if (!wh) { alert_('Connect a webhook first.','error'); return; }
+  const content = document.getElementById('rContent').value.trim();
+  if (!content) { alert_('Message cannot be empty.','error'); return; }
+  const delayRaw = parseInt(document.getElementById('rDelay').value);
+  const delay = isNaN(delayRaw) || delayRaw < 1 ? 1000 : delayRaw;
+
+  repeatRunning = true;
+  repeatCount = 0;
+  setRepeatUI(true);
+
+  const p = parse(wh._url);
+  const loop = async () => {
+    if (!repeatRunning) return;
+    const body = { content };
+    const u = document.getElementById('rUser').value.trim();
+    const a = document.getElementById('rAv').value.trim();
+    if (u) body.username = u;
+    if (a) body.avatar_url = a;
+    try {
+      const r = await fetch(`https://discord.com/api/webhooks/${p.id}/${p.token}`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+      });
+      if (r.ok) {
+        repeatCount++;
+        document.getElementById('repeatCountLabel').textContent = `${repeatCount} sent`;
+      } else if (r.status === 429) {
+        // Rate limited — wait longer
+        const data = await r.json().catch(()=>({retry_after:2}));
+        await new Promise(res => setTimeout(res, (data.retry_after||2)*1000));
+      }
+    } catch(e) { /* network error, keep trying */ }
+    if (repeatRunning) {
+      repeatTimer = setTimeout(loop, delay);
+    }
+  };
+  loop();
+}
+
+function stopRepeat() {
+  repeatRunning = false;
+  clearTimeout(repeatTimer);
+  setRepeatUI(false);
+}
+
+function setRepeatUI(running) {
+  const btn = document.getElementById('rStartBtn');
+  const dot = document.getElementById('rDot');
+  const lbl = document.getElementById('rStatusLabel');
+  if (running) {
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop`;
+    btn.className = 'btn btn-r';
+    dot.className = 'repeat-dot running';
+    lbl.textContent = 'Running';
+  } else {
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Start`;
+    btn.className = 'btn btn-w';
+    dot.className = 'repeat-dot';
+    lbl.textContent = repeatCount > 0 ? `Stopped after ${repeatCount} messages` : 'Idle';
+  }
+}
+
+function clearRepeat() {
+  stopRepeat();
+  ['rContent','rUser','rAv'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rDelay').value = '1000';
+  document.getElementById('rCC').textContent = '0 / 2000';
+  repeatCount = 0;
+  document.getElementById('repeatCountLabel').textContent = '—';
+  document.getElementById('rStatusLabel').textContent = 'Idle';
+}
+
+// ── Send Text ────────────────────────────────────────────
+
+function msgMode(m, b) {
+  msgTab = m;
+  b.closest('.msg-tabs').querySelectorAll('.mt').forEach(t=>t.classList.remove('active')); b.classList.add('active');
+  document.getElementById('m-text').style.display = m==='text'?'block':'none';
+  document.getElementById('m-embed').style.display = m==='embed'?'block':'none';
+}
+
+function togTTS() { ttsOn=!ttsOn; document.getElementById('ttsT').className='tog'+(ttsOn?' on':''); }
+
+async function sendText() {
+  if (!wh) { alert_('Connect a webhook first.','error'); return; }
+  const content = document.getElementById('mContent').value.trim();
+  if (!content) { alert_('Message cannot be empty.','error'); return; }
+  const p = parse(wh._url);
+  const body = {content, tts:ttsOn};
+  const u=document.getElementById('mUser').value.trim(), a=document.getElementById('mAv').value.trim();
+  if (u) body.username=u; if (a) body.avatar_url=a;
+  await doPost(p, body, 'sendBtn', 'Message sent!', 'Send');
+}
+
+async function sendEmbed() {
+  if (!wh) { alert_('Connect a webhook first.','error'); return; }
+  const title=document.getElementById('eT').value.trim(), desc=document.getElementById('eD').value.trim();
+  if (!title&&!desc) { alert_('Embed needs a title or description.','error'); return; }
+  const p = parse(wh._url);
+  const color = parseInt(document.getElementById('eC').value.replace('#',''),16);
+  const embed = {color};
+  if (title) embed.title=title; if (desc) embed.description=desc;
+  const au=document.getElementById('eA').value.trim(), fo=document.getElementById('eF').value.trim(), im=document.getElementById('eI').value.trim();
+  if (au) embed.author={name:au}; if (fo) embed.footer={text:fo}; if (im) embed.image={url:im};
+  const body={embeds:[embed]};
+  const ab=document.getElementById('eAb').value.trim(), eu=document.getElementById('eU').value.trim();
+  if (ab) body.content=ab; if (eu) body.username=eu;
+  await doPost(p, body, 'sendEBtn', 'Embed sent!', 'Send Embed');
+}
+
+async function doPost(p, body, btnId, ok, label) {
+  const btn=document.getElementById(btnId); btn.disabled=true;
+  btn.innerHTML='<span class="sp"></span>';
+  try {
+    const r = await fetch(`https://discord.com/api/webhooks/${p.id}/${p.token}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if (!r.ok) { const e=await r.json().catch(()=>{}); throw new Error(e?.message||`HTTP ${r.status}`); }
+    alert_(ok);
+  } catch(e) { alert_(`Failed: ${e.message}`,'error'); }
+  finally {
+    btn.disabled=false;
+    btn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg> ${label}`;
+  }
+}
+
+function clearText() {
+  ['mContent','mUser','mAv'].forEach(id=>document.getElementById(id).value='');
+  ttsOn=false; document.getElementById('ttsT').className='tog';
+  document.getElementById('mCC').textContent='0 / 2000';
+}
+
+function clearEmbed() {
+  ['eT','eD','eA','eF','eI','eU','eAb'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('eC').value='#5865f2'; document.getElementById('eCH').value='#5865f2';
+  document.getElementById('eDCC').textContent='0 / 4096'; updateEP();
+}
+
+// ── Edit ─────────────────────────────────────────────────
+
+function resetEdit() {
+  if (!wh) return;
+  document.getElementById('eName').value=wh.name||'';
+  document.getElementById('eAvUrl').value=wh.avatar?`https://cdn.discordapp.com/avatars/${wh.id}/${wh.avatar}.png`:'';
+}
+
+async function editWH() {
+  if (!wh) { alert_('Connect a webhook first.','error'); return; }
+  const p=parse(wh._url), name=document.getElementById('eName').value.trim(), aurl=document.getElementById('eAvUrl').value.trim();
+  if (!name&&!aurl) { alert_('Enter a name or avatar URL.','warning'); return; }
+  if (name&&(name.length<2||name.length>80)) { alert_('Name must be 2–80 chars.','error'); return; }
+  const body={}; if (name) body.name=name;
+  if (aurl) {
+    try { const r=await fetch(aurl); if(!r.ok) throw 0; const bl=await r.blob(); body.avatar=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(bl);}); }
+    catch { alert_('Could not load avatar image.','error'); return; }
+  }
+  const btn=document.getElementById('editBtn'); btn.disabled=true; btn.innerHTML='<span class="sp"></span>';
+  try {
+    const r=await fetch(`https://discord.com/api/webhooks/${p.id}/${p.token}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){const e=await r.json().catch(()=>{});throw new Error(e?.message||`HTTP ${r.status}`);}
+    wh={...(await r.json()),_url:wh._url}; renderInfo();
+    document.getElementById('sLabel').textContent=wh.name;
+    alert_('Webhook updated.');
+  } catch(e) { alert_(`Update failed: ${e.message}`,'error'); }
+  finally { btn.disabled=false; btn.textContent='Save Changes'; }
+}
+
+// ── Delete (inline confirm) ───────────────────────────────
+
+function cancelDelete() {
+  document.getElementById('confirmBox').classList.remove('show');
+  document.getElementById('deleteInitBtn').style.display = '';
+}
+
+function askDelete() {
+  if (!wh) { alert_('Connect a webhook first.','error'); return; }
+  document.getElementById('confirmName').textContent = wh.name || 'this webhook';
+  document.getElementById('confirmBox').classList.add('show');
+}
+
+async function deleteWH() {
+  const p=parse(wh._url), btn=document.getElementById('confDelBtn');
+  btn.disabled=true; btn.innerHTML='<span class="sp l"></span>';
+  try {
+    const r=await fetch(`https://discord.com/api/webhooks/${p.id}/${p.token}`,{method:'DELETE'});
+    if(r.status!==204) throw new Error(`HTTP ${r.status}`);
+    wh=null; stopRepeat();
+    document.getElementById('wUrl').value='';
+    document.getElementById('sDot').className='dot';
+    document.getElementById('sLabel').textContent='Not connected';
+    document.getElementById('ie').style.display=''; document.getElementById('ic').style.display='none';
+    cancelDelete();
+    alert_('Webhook deleted permanently.','warning',6000);
+  } catch(e) { alert_(`Delete failed: ${e.message}`,'error'); }
+  finally { btn.disabled=false; btn.textContent='Yes, delete it'; }
+}
+
+// ── Embed preview ─────────────────────────────────────────
+
+function updateEP() {
+  const t=document.getElementById('eT').value.trim(), d=document.getElementById('eD').value.trim(), c=document.getElementById('eC').value;
+  document.getElementById('epv').style.borderLeftColor=c;
+  document.getElementById('epT').textContent=t||'Embed Title';
+  document.getElementById('epD').textContent=d||'Your description will appear here...';
+}
+function syncColor() { document.getElementById('eCH').value=document.getElementById('eC').value; updateEP(); }
+function syncColorHex() { const v=document.getElementById('eCH').value; if(/^#[0-9a-fA-F]{6}$/.test(v)){document.getElementById('eC').value=v;updateEP();} }
+
+function cc(id,cid,max) {
+  const l=document.getElementById(id).value.length, el=document.getElementById(cid);
+  el.textContent=`${l} / ${max}`; el.className='cc'+(l>=max?' over':l>max*.9?' warn':'');
+}
+
+document.getElementById('wUrl').addEventListener('keydown',e=>{if(e.key==='Enter')loadWH();});
+</script>
+</body>
+</html>
