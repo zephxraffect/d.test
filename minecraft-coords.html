@@ -1,0 +1,1860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COORDS — Minecraft Coordinate Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #000000;
+    --bg1: #0a0a0a;
+    --bg2: #111111;
+    --bg3: #1a1a1a;
+    --bg4: #222222;
+    --border: #2a2a2a;
+    --border2: #333333;
+    --text: #e8e8e8;
+    --text2: #888888;
+    --text3: #555555;
+    --accent: #00ff88;
+    --accent2: #00cc6a;
+    --nether: #ff4422;
+    --nether2: #cc2200;
+    --end: #aa88ff;
+    --end2: #8866dd;
+    --overworld: #00ff88;
+    --warn: #ffaa00;
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Barlow', sans-serif;
+    --cond: 'Barlow Condensed', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--cond);
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .logo span {
+    color: var(--text3);
+    font-weight: 300;
+    margin-left: 10px;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .kbd-hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    border: 1px solid var(--border2);
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: var(--bg2);
+  }
+
+  /* LAYOUT */
+  .app-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    background: var(--bg1);
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .nav-section-label {
+    font-family: var(--cond);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--text3);
+    text-transform: uppercase;
+    padding: 8px 20px 4px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .nav-item:hover { background: var(--bg2); color: var(--text); }
+
+  .nav-item.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(0,255,136,0.05);
+  }
+
+  .nav-icon {
+    font-size: 15px;
+    width: 20px;
+    text-align: center;
+  }
+
+  .nav-count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--bg3);
+    color: var(--text3);
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* MAIN */
+  main {
+    padding: 0;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* PANEL HEADER */
+  .panel-header {
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: var(--bg1);
+  }
+
+  .panel-title {
+    font-family: var(--cond);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text);
+    text-transform: uppercase;
+  }
+
+  .panel-subtitle {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 2px;
+    font-family: var(--mono);
+  }
+
+  /* SEARCH BAR */
+  .search-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-wrap input {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 12px 8px 34px;
+    border-radius: 4px;
+    width: 240px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--text3); }
+
+  .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  /* FILTER BUTTONS */
+  .filter-bar {
+    display: flex;
+    gap: 6px;
+    padding: 12px 28px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-label {
+    font-size: 11px;
+    color: var(--text3);
+    font-family: var(--mono);
+    margin-right: 4px;
+  }
+
+  .filter-btn {
+    padding: 4px 12px;
+    border-radius: 3px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text2);
+    font-family: var(--cond);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .filter-btn:hover { border-color: var(--text3); color: var(--text); }
+  .filter-btn.active { background: var(--bg3); color: var(--text); border-color: var(--text2); }
+  .filter-btn.dim-ow.active { border-color: var(--overworld); color: var(--overworld); background: rgba(0,255,136,0.08); }
+  .filter-btn.dim-nether.active { border-color: var(--nether); color: var(--nether); background: rgba(255,68,34,0.08); }
+  .filter-btn.dim-end.active { border-color: var(--end); color: var(--end); background: rgba(170,136,255,0.08); }
+
+  /* CONTENT */
+  .panel-content {
+    padding: 20px 28px;
+  }
+
+  /* LOCATION GRID */
+  .locations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+  }
+
+  /* LOCATION CARD */
+  .loc-card {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .loc-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+
+  .loc-card.ow::before { background: var(--overworld); }
+  .loc-card.nether::before { background: var(--nether); }
+  .loc-card.end::before { background: var(--end); }
+
+  .loc-card:hover {
+    border-color: var(--border2);
+    background: var(--bg2);
+    transform: translateY(-1px);
+  }
+
+  .loc-card.favorited { border-color: rgba(255,170,0,0.3); }
+
+  .loc-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .loc-name {
+    font-family: var(--cond);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: var(--text);
+    line-height: 1.1;
+  }
+
+  .loc-fav {
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 14px;
+    transition: color 0.15s;
+    padding: 2px;
+    line-height: 1;
+  }
+
+  .loc-fav:hover, .loc-fav.active { color: var(--warn); }
+
+  .loc-coords {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .loc-card.nether .loc-coords { color: var(--nether); }
+  .loc-card.end .loc-coords { color: var(--end); }
+
+  .loc-meta {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .dim-badge {
+    font-family: var(--cond);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 2px;
+  }
+
+  .dim-badge.ow { background: rgba(0,255,136,0.1); color: var(--overworld); border: 1px solid rgba(0,255,136,0.2); }
+  .dim-badge.nether { background: rgba(255,68,34,0.1); color: var(--nether); border: 1px solid rgba(255,68,34,0.2); }
+  .dim-badge.end { background: rgba(170,136,255,0.1); color: var(--end); border: 1px solid rgba(170,136,255,0.2); }
+
+  .tag-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    background: var(--bg3);
+    padding: 2px 6px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+  }
+
+  .loc-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .loc-card:hover .loc-actions { opacity: 1; }
+
+  .act-btn {
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: 1px solid var(--border2);
+    background: var(--bg3);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .act-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--text3); }
+  .act-btn.danger:hover { border-color: var(--nether); color: var(--nether); }
+  .act-btn.copy-ok { border-color: var(--accent); color: var(--accent); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text3);
+  }
+
+  .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+  .empty-title { font-family: var(--cond); font-size: 20px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; color: var(--text2); }
+  .empty-sub { font-size: 13px; }
+
+  /* ADD FORM */
+  .add-form {
+    max-width: 560px;
+  }
+
+  .form-section {
+    margin-bottom: 24px;
+  }
+
+  .form-section-title {
+    font-family: var(--cond);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .form-row.single { grid-template-columns: 1fr; }
+  .form-row.double { grid-template-columns: 1fr 1fr; }
+
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+
+  label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  input[type=text], input[type=number], select, textarea {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 9px 12px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--text3); }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23555' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  .dim-select-ow { border-color: rgba(0,255,136,0.3) !important; }
+  .dim-select-nether { border-color: rgba(255,68,34,0.3) !important; }
+  .dim-select-end { border-color: rgba(170,136,255,0.3) !important; }
+
+  /* QUICK PARSE */
+  .quick-parse {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+  }
+
+  .quick-parse-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .quick-parse input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border2);
+    border-radius: 0;
+    padding: 6px 0;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
+  .quick-parse-hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+  }
+
+  .quick-parse-hint span {
+    color: var(--accent);
+    opacity: 0.7;
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding: 9px 20px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--cond);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-primary:hover { background: var(--accent2); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border2);
+  }
+
+  .btn-secondary:hover { border-color: var(--text3); color: var(--text); background: var(--bg2); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--nether);
+    border: 1px solid rgba(255,68,34,0.3);
+  }
+
+  .btn-danger:hover { background: rgba(255,68,34,0.1); border-color: var(--nether); }
+
+  .btn-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+
+  /* NETHER CALC */
+  .nether-calc {
+    max-width: 600px;
+  }
+
+  .calc-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .calc-panel {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 18px;
+  }
+
+  .calc-panel.ow-panel { border-top: 2px solid var(--overworld); }
+  .calc-panel.nether-panel { border-top: 2px solid var(--nether); }
+
+  .calc-panel-title {
+    font-family: var(--cond);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .calc-panel.ow-panel .calc-panel-title { color: var(--overworld); }
+  .calc-panel.nether-panel .calc-panel-title { color: var(--nether); }
+
+  .calc-arrow {
+    text-align: center;
+    color: var(--text3);
+    font-size: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .calc-convert-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 5px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .calc-convert-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .result-box {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin-top: 12px;
+  }
+
+  .result-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .result-coords {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+  }
+
+  .result-coords.ow-color { color: var(--overworld); }
+  .result-coords.nether-color { color: var(--nether); }
+
+  .efficiency-bar {
+    margin-top: 14px;
+  }
+
+  .eff-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .eff-track {
+    height: 4px;
+    background: var(--bg4);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .eff-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--nether), var(--warn));
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .calc-info {
+    background: rgba(255,170,0,0.07);
+    border: 1px solid rgba(255,170,0,0.2);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--warn);
+    margin-top: 10px;
+    font-family: var(--mono);
+  }
+
+  /* DISTANCE CALC */
+  .dist-calc {
+    max-width: 600px;
+  }
+
+  .dist-select-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .dist-select-panel {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+  }
+
+  .dist-vs {
+    text-align: center;
+    font-family: var(--cond);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text3);
+  }
+
+  .dist-result {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .dist-value {
+    font-family: var(--mono);
+    font-size: 40px;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+
+  .dist-unit {
+    font-family: var(--cond);
+    font-size: 14px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .dist-sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 14px;
+  }
+
+  /* MODAL OVERLAY */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--bg1);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 28px;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    animation: modalIn 0.2s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal-title {
+    font-family: var(--cond);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    padding-right: 30px;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 20px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: color 0.15s;
+  }
+
+  .modal-close:hover { color: var(--text); }
+
+  /* QUICK ADD MODAL */
+  .quick-modal {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-top: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 24px;
+    width: 100%;
+    max-width: 500px;
+    animation: modalIn 0.15s ease;
+  }
+
+  .quick-modal-title {
+    font-family: var(--cond);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 10px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    z-index: 500;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s;
+    pointer-events: none;
+  }
+
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { border-left-color: var(--nether); }
+
+  /* IMPORT/EXPORT */
+  .io-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* STATS ROW */
+  .stats-row {
+    display: flex;
+    gap: 16px;
+    padding: 12px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg1);
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--text);
+  }
+
+  .stat-label {
+    font-family: var(--cond);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    text-transform: uppercase;
+  }
+
+  .stat-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-right: 2px;
+    display: inline-block;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 700px) {
+    .app-layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: none; border-bottom: 1px solid var(--border); padding: 8px 12px; }
+    .nav-section-label, .sidebar-footer { display: none; }
+    .nav-item { padding: 8px 12px; white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; }
+    .nav-item.active { border-bottom-color: var(--accent); border-left: none; background: none; }
+    .calc-grid, .dist-select-row { grid-template-columns: 1fr; }
+    .calc-arrow { flex-direction: row; }
+    .locations-grid { grid-template-columns: 1fr; }
+    .panel-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .search-wrap input { width: 100%; }
+    .search-row { width: 100%; }
+    .search-wrap { flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">COORDS<span>MINECRAFT NAV</span></div>
+  <div class="header-actions">
+    <span class="kbd-hint">CTRL+K quick add</span>
+    <button class="btn btn-secondary" style="padding:6px 14px;font-size:11px;" onclick="openQuickAdd()">+ Quick Add</button>
+  </div>
+</header>
+
+<div class="app-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="nav-section-label">Navigation</div>
+    <div class="nav-item active" onclick="switchTab('locations')">
+      <span class="nav-icon">📍</span>
+      <span>Saved Locations</span>
+      <span class="nav-count" id="nav-count">0</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('add')">
+      <span class="nav-icon">➕</span>
+      <span>Add Location</span>
+    </div>
+    <div class="nav-section-label" style="margin-top:8px;">Tools</div>
+    <div class="nav-item" onclick="switchTab('nether')">
+      <span class="nav-icon">🔥</span>
+      <span>Nether Calculator</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('distance')">
+      <span class="nav-icon">📏</span>
+      <span>Distance</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('data')">
+      <span class="nav-icon">💾</span>
+      <span>Import / Export</span>
+    </div>
+    <div class="sidebar-footer">
+      <div style="font-size:11px;color:var(--text3);font-family:var(--mono);">
+        Data stored locally<br>No account needed
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+
+    <!-- LOCATIONS TAB -->
+    <div class="tab-panel active" id="tab-locations">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Saved Locations</div>
+          <div class="panel-subtitle" id="loc-subtitle">0 coordinates stored</div>
+        </div>
+        <div class="search-row">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" placeholder="search locations..." id="search-input" oninput="renderLocations()">
+          </div>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <span class="filter-label">DIM:</span>
+        <button class="filter-btn dim-ow active" data-filter="all" onclick="setDimFilter('all',this)">All</button>
+        <button class="filter-btn dim-ow" data-filter="overworld" onclick="setDimFilter('overworld',this)">🌍 Overworld</button>
+        <button class="filter-btn dim-nether" data-filter="nether" onclick="setDimFilter('nether',this)">🔥 Nether</button>
+        <button class="filter-btn dim-end" data-filter="end" onclick="setDimFilter('end',this)">🌌 End</button>
+        <span class="filter-label" style="margin-left:12px;">SORT:</span>
+        <button class="filter-btn active" id="sort-name" onclick="setSort('name',this)">Name</button>
+        <button class="filter-btn" id="sort-fav" onclick="setSort('fav',this)">⭐ Favorites</button>
+        <button class="filter-btn" id="sort-dim" onclick="setSort('dim',this)">Dimension</button>
+      </div>
+      <div class="stats-row" id="stats-row"></div>
+      <div class="panel-content">
+        <div class="locations-grid" id="locations-grid"></div>
+      </div>
+    </div>
+
+    <!-- ADD TAB -->
+    <div class="tab-panel" id="tab-add">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title" id="add-panel-title">Add Location</div>
+          <div class="panel-subtitle">Store a new coordinate</div>
+        </div>
+      </div>
+      <div class="panel-content">
+        <div class="add-form">
+          <!-- Quick Parse -->
+          <div class="quick-parse" id="quick-parse-box">
+            <div class="quick-parse-label">⚡ Quick Parse</div>
+            <input type="text" id="quick-parse-input" placeholder="Base 120 64 -300 overworld" oninput="parseQuickInput(this.value)">
+            <div class="quick-parse-hint">Type: <span>name x y z dimension</span> — auto-fills form below</div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">Location Info</div>
+            <div class="form-row single">
+              <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="f-name" placeholder="e.g. Main Base, End Portal" maxlength="50">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>X</label>
+                <input type="number" id="f-x" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label>Y</label>
+                <input type="number" id="f-y" placeholder="64">
+              </div>
+              <div class="form-group">
+                <label>Z</label>
+                <input type="number" id="f-z" placeholder="0">
+              </div>
+            </div>
+            <div class="form-row double">
+              <div class="form-group">
+                <label>Dimension</label>
+                <select id="f-dim" onchange="updateDimStyle()">
+                  <option value="overworld">🌍 Overworld</option>
+                  <option value="nether">🔥 Nether</option>
+                  <option value="end">🌌 The End</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Tags (comma-separated)</label>
+                <input type="text" id="f-tags" placeholder="base, village, portal...">
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Notes (optional)</div>
+            <div class="form-row single">
+              <div class="form-group">
+                <textarea id="f-notes" placeholder="Any extra notes..." style="min-height:70px;resize:vertical;font-family:var(--sans);font-size:13px;"></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="save-btn" onclick="saveLocation()">Save Location</button>
+            <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+            <button class="btn btn-secondary" id="cancel-edit-btn" onclick="cancelEdit()" style="display:none;color:var(--nether);border-color:rgba(255,68,34,0.3)">Cancel Edit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NETHER TAB -->
+    <div class="tab-panel" id="tab-nether">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Nether Calculator</div>
+          <div class="panel-subtitle">Overworld ↔ Nether coordinate conversion (8:1 ratio)</div>
+        </div>
+      </div>
+      <div class="panel-content">
+        <div class="nether-calc">
+          <div class="calc-grid">
+            <div class="calc-panel ow-panel">
+              <div class="calc-panel-title">🌍 Overworld</div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label>X</label>
+                <input type="number" id="nc-ow-x" placeholder="0" oninput="calcNether()">
+              </div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label>Y</label>
+                <input type="number" id="nc-ow-y" placeholder="64" oninput="calcNether()">
+              </div>
+              <div class="form-group">
+                <label>Z</label>
+                <input type="number" id="nc-ow-z" placeholder="0" oninput="calcNether()">
+              </div>
+            </div>
+            <div class="calc-arrow">
+              <span>⇄</span>
+              <button class="calc-convert-btn" onclick="calcFromNether()">⬆ From Nether</button>
+            </div>
+            <div class="calc-panel nether-panel">
+              <div class="calc-panel-title">🔥 Nether</div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label>X</label>
+                <input type="number" id="nc-n-x" placeholder="0" oninput="calcOverworld()">
+              </div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label>Y</label>
+                <input type="number" id="nc-n-y" placeholder="64" oninput="calcOverworld()">
+              </div>
+              <div class="form-group">
+                <label>Z</label>
+                <input type="number" id="nc-n-z" placeholder="0" oninput="calcOverworld()">
+              </div>
+            </div>
+          </div>
+
+          <div class="result-box" id="nether-result" style="display:none;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div>
+                <div class="result-label">🔥 Nether Portal At</div>
+                <div class="result-coords nether-color" id="res-nether-coords">—</div>
+              </div>
+              <div>
+                <div class="result-label">🌍 Overworld Portal At</div>
+                <div class="result-coords ow-color" id="res-ow-coords">—</div>
+              </div>
+            </div>
+            <div class="efficiency-bar">
+              <div class="eff-label">
+                <span>Travel Efficiency</span>
+                <span id="eff-pct">—</span>
+              </div>
+              <div class="eff-track">
+                <div class="eff-fill" id="eff-fill" style="width:87.5%"></div>
+              </div>
+            </div>
+            <div class="calc-info" id="nether-tip">
+              ⚠ Nether Y must be between 1–127. Portals outside this range may not function.
+            </div>
+          </div>
+
+          <!-- Load from saved -->
+          <div style="margin-top:20px;">
+            <div class="form-section-title" style="font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:.15em;color:var(--text3);text-transform:uppercase;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:10px;">Load From Saved Location</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select id="nc-load-select" style="flex:1;">
+                <option value="">— select a saved location —</option>
+              </select>
+              <button class="btn btn-secondary" style="white-space:nowrap;" onclick="loadIntoCalc()">Load</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DISTANCE TAB -->
+    <div class="tab-panel" id="tab-distance">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Distance Calculator</div>
+          <div class="panel-subtitle">Calculate distance between two saved locations</div>
+        </div>
+      </div>
+      <div class="panel-content">
+        <div class="dist-calc">
+          <div class="dist-select-row">
+            <div class="dist-select-panel">
+              <div class="form-section-title" style="font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:.15em;color:var(--text3);text-transform:uppercase;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:10px;">Location A</div>
+              <div class="form-group">
+                <label>Saved Location</label>
+                <select id="dist-a" onchange="calcDistance()">
+                  <option value="">— select —</option>
+                </select>
+              </div>
+              <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:8px;" id="dist-a-coords">—</div>
+            </div>
+            <div class="dist-vs">VS</div>
+            <div class="dist-select-panel">
+              <div class="form-section-title" style="font-family:var(--cond);font-size:11px;font-weight:700;letter-spacing:.15em;color:var(--text3);text-transform:uppercase;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:10px;">Location B</div>
+              <div class="form-group">
+                <label>Saved Location</label>
+                <select id="dist-b" onchange="calcDistance()">
+                  <option value="">— select —</option>
+                </select>
+              </div>
+              <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:8px;" id="dist-b-coords">—</div>
+            </div>
+          </div>
+          <div class="dist-result" id="dist-result">
+            <div class="dist-value" id="dist-val">—</div>
+            <div class="dist-unit">blocks (3D distance)</div>
+            <div class="dist-sub" id="dist-sub"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DATA TAB -->
+    <div class="tab-panel" id="tab-data">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Import / Export</div>
+          <div class="panel-subtitle">Backup and transfer your saved locations</div>
+        </div>
+      </div>
+      <div class="panel-content">
+        <div style="max-width:480px;display:flex;flex-direction:column;gap:24px;">
+          <div class="form-section">
+            <div class="form-section-title">Export</div>
+            <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6;">Download all your saved locations as a JSON file. Use this to backup your data or transfer it to another device.</p>
+            <button class="btn btn-primary" onclick="exportData()">⬇ Export JSON</button>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Import</div>
+            <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6;">Import locations from a previously exported JSON file. Duplicate entries (same name + coordinates) will be skipped.</p>
+            <div class="io-row">
+              <label class="btn btn-secondary" style="cursor:pointer;">⬆ Import JSON<input type="file" accept=".json" style="display:none;" onchange="importData(event)"></label>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Danger Zone</div>
+            <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6;">Permanently delete all saved locations. This cannot be undone.</p>
+            <button class="btn btn-danger" onclick="confirmClearAll()">🗑 Clear All Data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- QUICK ADD MODAL -->
+<div class="modal-overlay" id="quick-modal-overlay" onclick="closeQuickAdd(event)">
+  <div class="quick-modal" onclick="event.stopPropagation()">
+    <div class="quick-modal-title">⚡ Quick Add Location</div>
+    <div class="quick-parse-hint" style="margin-bottom:10px;">Type: <span style="color:var(--accent);">name x y z dimension</span></div>
+    <input type="text" id="qa-input" placeholder="Main Base 120 64 -300 overworld" style="font-size:15px;padding:12px;margin-bottom:12px;" onkeydown="qaKeydown(event)">
+    <div style="font-family:var(--mono);font-size:11px;color:var(--text3);min-height:18px;" id="qa-preview"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-primary" onclick="quickAddSave()">Save — Enter</button>
+      <button class="btn btn-secondary" onclick="closeQuickAdd()">Cancel — Esc</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal-overlay">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title" id="edit-modal-title">Edit Location</div>
+    <button class="modal-close" onclick="closeEditModal()">✕</button>
+    <input type="hidden" id="edit-id">
+    <div class="form-row single" style="margin-bottom:10px;">
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="em-name" maxlength="50">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:10px;">
+      <div class="form-group"><label>X</label><input type="number" id="em-x"></div>
+      <div class="form-group"><label>Y</label><input type="number" id="em-y"></div>
+      <div class="form-group"><label>Z</label><input type="number" id="em-z"></div>
+    </div>
+    <div class="form-row double" style="margin-bottom:10px;">
+      <div class="form-group">
+        <label>Dimension</label>
+        <select id="em-dim">
+          <option value="overworld">🌍 Overworld</option>
+          <option value="nether">🔥 Nether</option>
+          <option value="end">🌌 The End</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tags</label>
+        <input type="text" id="em-tags" placeholder="base, portal...">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>Notes</label>
+      <textarea id="em-notes" style="min-height:60px;resize:vertical;font-family:var(--sans);font-size:13px;"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveEditModal()">Save Changes</button>
+      <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal-overlay" onclick="closeDetailModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+let locations = [];
+let dimFilter = 'all';
+let sortMode = 'name';
+let editingId = null;
+
+// ─── STORAGE ─────────────────────────────────────────────────
+const STORAGE_KEY = 'mc_coords_v2';
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    locations = raw ? JSON.parse(raw) : [];
+  } catch { locations = []; }
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
+}
+
+// ─── TABS ─────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  const navItems = document.querySelectorAll('.nav-item');
+  const tabMap = { locations: 0, add: 1, nether: 2, distance: 3, data: 4 };
+  if (navItems[tabMap[tab]]) navItems[tabMap[tab]].classList.add('active');
+
+  if (tab === 'nether') refreshNetherSelect();
+  if (tab === 'distance') refreshDistSelects();
+  if (tab === 'locations') renderLocations();
+}
+
+// ─── RENDER LOCATIONS ──────────────────────────────────────────
+function dimClass(dim) {
+  if (dim === 'nether') return 'nether';
+  if (dim === 'end') return 'end';
+  return 'ow';
+}
+
+function dimLabel(dim) {
+  if (dim === 'nether') return 'Nether';
+  if (dim === 'end') return 'The End';
+  return 'Overworld';
+}
+
+function coordStr(loc) {
+  return `${loc.x}, ${loc.y}, ${loc.z}`;
+}
+
+function renderLocations() {
+  const q = (document.getElementById('search-input').value || '').toLowerCase();
+  const grid = document.getElementById('locations-grid');
+
+  let filtered = locations.filter(l => {
+    const matchDim = dimFilter === 'all' || l.dim === dimFilter;
+    const matchQ = !q || l.name.toLowerCase().includes(q)
+      || (l.tags && l.tags.toLowerCase().includes(q))
+      || coordStr(l).includes(q);
+    return matchDim && matchQ;
+  });
+
+  // Sort
+  if (sortMode === 'name') filtered.sort((a,b) => a.name.localeCompare(b.name));
+  else if (sortMode === 'fav') filtered.sort((a,b) => (b.fav?1:0) - (a.fav?1:0) || a.name.localeCompare(b.name));
+  else if (sortMode === 'dim') filtered.sort((a,b) => a.dim.localeCompare(b.dim) || a.name.localeCompare(b.name));
+
+  // Stats
+  const total = locations.length;
+  const byDim = { overworld: 0, nether: 0, end: 0 };
+  locations.forEach(l => { if (byDim[l.dim] !== undefined) byDim[l.dim]++; });
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-item"><span class="stat-dot" style="background:var(--overworld)"></span><span class="stat-value">${byDim.overworld}</span><span class="stat-label">Overworld</span></div>
+    <div class="stat-item"><span class="stat-dot" style="background:var(--nether)"></span><span class="stat-value">${byDim.nether}</span><span class="stat-label">Nether</span></div>
+    <div class="stat-item"><span class="stat-dot" style="background:var(--end)"></span><span class="stat-value">${byDim.end}</span><span class="stat-label">End</span></div>
+    <div class="stat-item" style="margin-left:auto"><span class="stat-value">${total}</span><span class="stat-label">Total</span></div>
+  `;
+  document.getElementById('nav-count').textContent = total;
+  document.getElementById('loc-subtitle').textContent = `${total} coordinate${total !== 1 ? 's' : ''} stored`;
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+      <div class="empty-icon">📍</div>
+      <div class="empty-title">${total === 0 ? 'No locations saved yet' : 'No results'}</div>
+      <div class="empty-sub">${total === 0 ? 'Click "Add Location" or press Ctrl+K to start' : 'Try a different search or filter'}</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(loc => `
+    <div class="loc-card ${dimClass(loc.dim)} ${loc.fav ? 'favorited' : ''}" onclick="openDetail('${loc.id}')">
+      <div class="loc-top">
+        <div class="loc-name">${escHtml(loc.name)}</div>
+        <span class="loc-fav ${loc.fav ? 'active' : ''}" title="Favorite" onclick="event.stopPropagation();toggleFav('${loc.id}')">${loc.fav ? '⭐' : '☆'}</span>
+      </div>
+      <div class="loc-coords">${coordStr(loc)}</div>
+      <div class="loc-meta">
+        <span class="dim-badge ${dimClass(loc.dim)}">${dimLabel(loc.dim)}</span>
+        ${loc.tags ? loc.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => `<span class="tag-badge">${escHtml(t)}</span>`).join('') : ''}
+      </div>
+      <div class="loc-actions" onclick="event.stopPropagation()">
+        <button class="act-btn" id="copy-${loc.id}" onclick="copyCoords('${loc.id}')">📋 Copy</button>
+        <button class="act-btn" onclick="openEditModal('${loc.id}')">✏ Edit</button>
+        <button class="act-btn danger" onclick="deleteLocation('${loc.id}')">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── FILTERS / SORT ───────────────────────────────────────────
+function setDimFilter(val, btn) {
+  dimFilter = val;
+  document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLocations();
+}
+
+function setSort(mode, btn) {
+  sortMode = mode;
+  document.querySelectorAll('#sort-name,#sort-fav,#sort-dim').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLocations();
+}
+
+// ─── TOGGLE FAV ───────────────────────────────────────────────
+function toggleFav(id) {
+  const loc = locations.find(l => l.id === id);
+  if (!loc) return;
+  loc.fav = !loc.fav;
+  save();
+  renderLocations();
+}
+
+// ─── COPY ─────────────────────────────────────────────────────
+function copyCoords(id) {
+  const loc = locations.find(l => l.id === id);
+  if (!loc) return;
+  const txt = `${loc.name}: ${coordStr(loc)} (${dimLabel(loc.dim)})`;
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.getElementById('copy-' + id);
+    if (btn) { btn.textContent = '✓ Copied'; btn.classList.add('copy-ok'); setTimeout(() => { btn.textContent = '📋 Copy'; btn.classList.remove('copy-ok'); }, 1500); }
+    showToast('Copied to clipboard!');
+  }).catch(() => {
+    showToast('Copy failed — check permissions', true);
+  });
+}
+
+// ─── DELETE ───────────────────────────────────────────────────
+function deleteLocation(id) {
+  const loc = locations.find(l => l.id === id);
+  if (!loc) return;
+  if (!confirm(`Delete "${loc.name}"?`)) return;
+  locations = locations.filter(l => l.id !== id);
+  save();
+  renderLocations();
+  showToast('Location deleted');
+}
+
+// ─── ADD FORM ─────────────────────────────────────────────────
+function saveLocation() {
+  const name = document.getElementById('f-name').value.trim();
+  const x = parseInt(document.getElementById('f-x').value);
+  const y = parseInt(document.getElementById('f-y').value);
+  const z = parseInt(document.getElementById('f-z').value);
+  const dim = document.getElementById('f-dim').value;
+  const tags = document.getElementById('f-tags').value.trim();
+  const notes = document.getElementById('f-notes').value.trim();
+
+  if (!name) { showToast('Name is required', true); return; }
+  if (isNaN(x) || isNaN(y) || isNaN(z)) { showToast('Enter valid coordinates', true); return; }
+
+  if (editingId) {
+    const loc = locations.find(l => l.id === editingId);
+    if (loc) { Object.assign(loc, { name, x, y, z, dim, tags, notes }); }
+    editingId = null;
+    document.getElementById('save-btn').textContent = 'Save Location';
+    document.getElementById('add-panel-title').textContent = 'Add Location';
+    document.getElementById('cancel-edit-btn').style.display = 'none';
+  } else {
+    locations.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2), name, x, y, z, dim, tags, notes, fav: false });
+  }
+
+  save();
+  clearForm();
+  renderLocations();
+  showToast('Location saved!');
+  switchTab('locations');
+}
+
+function clearForm() {
+  ['f-name','f-x','f-y','f-z','f-tags','f-notes'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('f-dim').value = 'overworld';
+  document.getElementById('quick-parse-input').value = '';
+  updateDimStyle();
+}
+
+function cancelEdit() {
+  editingId = null;
+  document.getElementById('save-btn').textContent = 'Save Location';
+  document.getElementById('add-panel-title').textContent = 'Add Location';
+  document.getElementById('cancel-edit-btn').style.display = 'none';
+  clearForm();
+}
+
+function updateDimStyle() {
+  const sel = document.getElementById('f-dim');
+  sel.className = '';
+  if (sel.value === 'overworld') sel.classList.add('dim-select-ow');
+  else if (sel.value === 'nether') sel.classList.add('dim-select-nether');
+  else sel.classList.add('dim-select-end');
+}
+
+// ─── QUICK PARSE ──────────────────────────────────────────────
+function parseQuickInput(val) {
+  const parts = val.trim().split(/\s+/);
+  if (parts.length < 4) return;
+
+  let dimIdx = -1;
+  const dimMap = { overworld: 'overworld', ow: 'overworld', nether: 'nether', end: 'end', theend: 'end' };
+  for (let i = parts.length - 1; i >= 1; i--) {
+    const key = parts[i].toLowerCase().replace(/[^a-z]/g,'');
+    if (dimMap[key]) { dimIdx = i; break; }
+  }
+
+  const dimParts = dimIdx > -1 ? parts.slice(0, dimIdx) : parts;
+  const nums = dimParts.slice(1).map(Number).filter(n => !isNaN(n));
+  const name = dimParts[0];
+  if (!name || nums.length < 3) return;
+
+  const dim = dimIdx > -1 ? dimMap[parts[dimIdx].toLowerCase().replace(/[^a-z]/g,'')] : 'overworld';
+
+  document.getElementById('f-name').value = name;
+  document.getElementById('f-x').value = nums[0];
+  document.getElementById('f-y').value = nums[1];
+  document.getElementById('f-z').value = nums[2];
+  document.getElementById('f-dim').value = dim;
+  updateDimStyle();
+}
+
+// ─── EDIT MODAL ───────────────────────────────────────────────
+function openEditModal(id) {
+  const loc = locations.find(l => l.id === id);
+  if (!loc) return;
+  document.getElementById('edit-id').value = id;
+  document.getElementById('em-name').value = loc.name;
+  document.getElementById('em-x').value = loc.x;
+  document.getElementById('em-y').value = loc.y;
+  document.getElementById('em-z').value = loc.z;
+  document.getElementById('em-dim').value = loc.dim;
+  document.getElementById('em-tags').value = loc.tags || '';
+  document.getElementById('em-notes').value = loc.notes || '';
+  document.getElementById('edit-modal-overlay').classList.add('open');
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal-overlay').classList.remove('open');
+}
+
+function saveEditModal() {
+  const id = document.getElementById('edit-id').value;
+  const loc = locations.find(l => l.id === id);
+  if (!loc) return;
+
+  const name = document.getElementById('em-name').value.trim();
+  const x = parseInt(document.getElementById('em-x').value);
+  const y = parseInt(document.getElementById('em-y').value);
+  const z = parseInt(document.getElementById('em-z').value);
+
+  if (!name || isNaN(x) || isNaN(y) || isNaN(z)) { showToast('Check your inputs', true); return; }
+
+  Object.assign(loc, {
+    name, x, y, z,
+    dim: document.getElementById('em-dim').value,
+    tags: document.getElementById('em-tags').value.trim(),
+    notes: document.getElementById('em-notes').value.trim()
+  });
+
+  save();
+  renderLocations();
+  closeEditModal();
+  showToast('Location updated!');
+}
+
+// ─── DETAIL MODAL ────────────────────────────────────────────
+function openDetail(id) {
+  const loc = locations.find(l => l.id === id);
+  if (!loc) return;
+  const dc = dimClass(loc.dim);
+  const content = `
+    <div style="border-left:3px solid var(--${dc==='ow'?'overworld':dc==='nether'?'nether':'end'});padding-left:14px;margin-bottom:20px;">
+      <div style="font-family:var(--cond);font-size:26px;font-weight:700;letter-spacing:.03em;">${escHtml(loc.name)}</div>
+      <div class="dim-badge ${dc}" style="display:inline-block;margin-top:6px;">${dimLabel(loc.dim)}</div>
+      ${loc.fav ? '<span style="margin-left:8px;font-size:14px;">⭐</span>' : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+      ${['X','Y','Z'].map((a,i) => `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:3px;padding:10px 12px;"><div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">${a}</div><div style="font-family:var(--mono);font-size:20px;color:var(--accent);">${[loc.x,loc.y,loc.z][i]}</div></div>`).join('')}
+    </div>
+    ${loc.tags ? `<div style="margin-bottom:12px;">${loc.tags.split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="tag-badge" style="margin-right:4px;">${escHtml(t)}</span>`).join('')}</div>` : ''}
+    ${loc.notes ? `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:10px 12px;font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.5;">${escHtml(loc.notes)}</div>` : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" style="font-size:12px;padding:8px 16px;" onclick="copyCoords('${loc.id}');closeDetailModal()">📋 Copy</button>
+      <button class="btn btn-secondary" style="font-size:12px;padding:8px 16px;" onclick="closeDetailModal();openEditModal('${loc.id}')">✏ Edit</button>
+      <button class="btn btn-secondary" style="font-size:12px;padding:8px 16px;" onclick="closeDetailModal();loadCoordsIntoNether(${loc.x},${loc.y},${loc.z},'${loc.dim}')">🔥 Nether Calc</button>
+      <button class="btn btn-danger" style="font-size:12px;padding:8px 16px;" onclick="deleteLocation('${loc.id}');closeDetailModal()">🗑 Delete</button>
+    </div>
+  `;
+  document.getElementById('detail-content').innerHTML = content;
+  document.getElementById('detail-modal-overlay').classList.add('open');
+}
+
+function closeDetailModal(e) {
+  if (e && e.target !== document.getElementById('detail-modal-overlay')) return;
+  document.getElementById('detail-modal-overlay').classList.remove('open');
+}
+
+// ─── NETHER CALCULATOR ────────────────────────────────────────
+function calcNether() {
+  const x = parseFloat(document.getElementById('nc-ow-x').value);
+  const y = parseFloat(document.getElementById('nc-ow-y').value);
+  const z = parseFloat(document.getElementById('nc-ow-z').value);
+  if (isNaN(x) || isNaN(z)) { document.getElementById('nether-result').style.display = 'none'; return; }
+
+  const nx = Math.round(x / 8);
+  const ny = isNaN(y) ? 64 : Math.min(127, Math.max(1, Math.round(y)));
+  const nz = Math.round(z / 8);
+
+  document.getElementById('nc-n-x').value = nx;
+  document.getElementById('nc-n-y').value = ny;
+  document.getElementById('nc-n-z').value = nz;
+
+  showNetherResult(x, isNaN(y)?64:y, z, nx, ny, nz);
+}
+
+function calcOverworld() {
+  const x = parseFloat(document.getElementById('nc-n-x').value);
+  const y = parseFloat(document.getElementById('nc-n-y').value);
+  const z = parseFloat(document.getElementById('nc-n-z').value);
+  if (isNaN(x) || isNaN(z)) { document.getElementById('nether-result').style.display = 'none'; return; }
+
+  const owx = Math.round(x * 8);
+  const owy = isNaN(y) ? 64 : y;
+  const owz = Math.round(z * 8);
+
+  document.getElementById('nc-ow-x').value = owx;
+  document.getElementById('nc-ow-y').value = owy;
+  document.getElementById('nc-ow-z').value = owz;
+
+  showNetherResult(owx, owy, owz, x, isNaN(y)?64:y, z);
+}
+
+function calcFromNether() { calcOverworld(); }
+
+function showNetherResult(owx, owy, owz, nx, ny, nz) {
+  document.getElementById('res-nether-coords').textContent = `${nx}, ${ny}, ${nz}`;
+  document.getElementById('res-ow-coords').textContent = `${owx}, owy, ${owz}`.replace('owy', Math.round(owy));
+  document.getElementById('res-ow-coords').textContent = `${owx}, ${Math.round(owy)}, ${owz}`;
+
+  const owDist = Math.sqrt(owx*owx + owz*owz);
+  const nDist = Math.sqrt(nx*nx + nz*nz);
+  const effPct = owDist > 0 ? Math.round((1 - nDist / owDist) * 100) : 87.5;
+  document.getElementById('eff-pct').textContent = `${Math.max(0,Math.min(100,Math.round(87.5)))}% shorter via Nether`;
+  document.getElementById('eff-fill').style.width = '87.5%';
+
+  const yWarn = ny <= 1 || ny >= 127;
+  document.getElementById('nether-tip').innerHTML = yWarn
+    ? '⚠ Nether Y is near the boundary (1–127). Portal may not function.'
+    : '✓ Portal coordinates look valid. Nether travel is 8× faster than Overworld.';
+  document.getElementById('nether-tip').style.borderColor = yWarn ? 'rgba(255,170,0,0.3)' : 'rgba(0,255,136,0.2)';
+  document.getElementById('nether-tip').style.background = yWarn ? 'rgba(255,170,0,0.07)' : 'rgba(0,255,136,0.05)';
+  document.getElementById('nether-tip').style.color = yWarn ? 'var(--warn)' : 'var(--accent)';
+
+  document.getElementById('nether-result').style.display = 'block';
+}
+
+function refreshNetherSelect() {
+  const sel = document.getElementById('nc-load-select');
+  sel.innerHTML = '<option value="">— select a saved location —</option>' +
+    locations.map(l => `<option value="${l.id}">${l.name} (${coordStr(l)})</option>`).join('');
+}
+
+function loadIntoCalc() {
+  const id = document.getElementById('nc-load-select').value;
+  if (!id) return;
+  const loc = locations.find(l => l.id === id);
+  if (!loc) return;
+  loadCoordsIntoNether(loc.x, loc.y, loc.z, loc.dim);
+}
+
+function loadCoordsIntoNether(x, y, z, dim) {
+  switchTab('nether');
+  setTimeout(() => {
+    if (dim === 'nether') {
+      document.getElementById('nc-n-x').value = x;
+      document.getElementById('nc-n-y').value = y;
+      document.getElementById('nc-n-z').value = z;
+      calcOverworld();
+    } else {
+      document.getElementById('nc-ow-x').value = x;
+      document.getElementById('nc-ow-y').value = y;
+      document.getElementById('nc-ow-z').value = z;
+      calcNether();
+    }
+  }, 50);
+}
+
+// ─── DISTANCE ────────────────────────────────────────────────
+function refreshDistSelects() {
+  const opts = '<option value="">— select —</option>' +
+    locations.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+  document.getElementById('dist-a').innerHTML = opts;
+  document.getElementById('dist-b').innerHTML = opts;
+  document.getElementById('dist-val').textContent = '—';
+  document.getElementById('dist-sub').textContent = '';
+  document.getElementById('dist-a-coords').textContent = '—';
+  document.getElementById('dist-b-coords').textContent = '—';
+}
+
+function calcDistance() {
+  const ia = document.getElementById('dist-a').value;
+  const ib = document.getElementById('dist-b').value;
+  const la = locations.find(l => l.id === ia);
+  const lb = locations.find(l => l.id === ib);
+
+  document.getElementById('dist-a-coords').textContent = la ? coordStr(la) + ' · ' + dimLabel(la.dim) : '—';
+  document.getElementById('dist-b-coords').textContent = lb ? coordStr(lb) + ' · ' + dimLabel(lb.dim) : '—';
+
+  if (!la || !lb) { document.getElementById('dist-val').textContent = '—'; document.getElementById('dist-sub').textContent = ''; return; }
+
+  const dx = la.x - lb.x, dy = la.y - lb.y, dz = la.z - lb.z;
+  const d3 = Math.round(Math.sqrt(dx*dx + dy*dy + dz*dz));
+  const d2 = Math.round(Math.sqrt(dx*dx + dz*dz));
+
+  document.getElementById('dist-val').textContent = d3.toLocaleString();
+
+  let sub = `2D (horizontal): ${d2.toLocaleString()} blocks`;
+  if (la.dim !== lb.dim) sub += ` · ⚠ Different dimensions`;
+  else if (la.dim === 'overworld') {
+    const nd = Math.round(d2 / 8);
+    sub += ` · Via Nether: ~${nd.toLocaleString()} blocks`;
+  }
+  document.getElementById('dist-sub').textContent = sub;
+}
+
+// ─── QUICK ADD ────────────────────────────────────────────────
+function openQuickAdd() {
+  document.getElementById('quick-modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('qa-input').focus(), 50);
+}
+
+function closeQuickAdd(e) {
+  if (e && e.target !== document.getElementById('quick-modal-overlay') && !e.target.closest('.quick-modal button')) return;
+  document.getElementById('quick-modal-overlay').classList.remove('open');
+  document.getElementById('qa-input').value = '';
+  document.getElementById('qa-preview').textContent = '';
+}
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); openQuickAdd(); }
+  if (e.key === 'Escape') {
+    document.getElementById('quick-modal-overlay').classList.remove('open');
+    document.getElementById('edit-modal-overlay').classList.remove('open');
+    document.getElementById('detail-modal-overlay').classList.remove('open');
+  }
+});
+
+function qaKeydown(e) {
+  if (e.key === 'Enter') quickAddSave();
+  else updateQaPreview();
+}
+
+function updateQaPreview() {
+  const val = document.getElementById('qa-input').value.trim();
+  const parts = val.split(/\s+/);
+  if (parts.length < 4) { document.getElementById('qa-preview').textContent = ''; return; }
+  document.getElementById('qa-preview').textContent = `→ "${parts[0]}" at ${parts.slice(1,4).join(', ')}`;
+}
+
+function quickAddSave() {
+  const val = document.getElementById('qa-input').value.trim();
+  const parts = val.split(/\s+/);
+  if (parts.length < 4) { showToast('Format: name x y z [dimension]', true); return; }
+
+  const name = parts[0];
+  const x = parseInt(parts[1]), y = parseInt(parts[2]), z = parseInt(parts[3]);
+  if (isNaN(x) || isNaN(y) || isNaN(z)) { showToast('Invalid coordinates', true); return; }
+
+  const dimMap = { overworld: 'overworld', ow: 'overworld', nether: 'nether', end: 'end' };
+  const rawDim = (parts[4] || 'overworld').toLowerCase();
+  const dim = dimMap[rawDim] || 'overworld';
+
+  locations.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2), name, x, y, z, dim, tags: '', notes: '', fav: false });
+  save();
+  renderLocations();
+  document.getElementById('quick-modal-overlay').classList.remove('open');
+  document.getElementById('qa-input').value = '';
+  showToast(`"${name}" saved!`);
+}
+
+// ─── IMPORT / EXPORT ──────────────────────────────────────────
+function exportData() {
+  const blob = new Blob([JSON.stringify(locations, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'mc-coords-backup.json'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Export downloaded!');
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) throw new Error();
+      let added = 0;
+      data.forEach(item => {
+        if (!item.name || item.x === undefined) return;
+        const dup = locations.find(l => l.name === item.name && l.x === item.x && l.y === item.y && l.z === item.z);
+        if (!dup) { locations.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2), ...item, fav: item.fav || false }); added++; }
+      });
+      save(); renderLocations();
+      showToast(`Imported ${added} location${added !== 1 ? 's' : ''}!`);
+    } catch { showToast('Invalid JSON file', true); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function confirmClearAll() {
+  if (!confirm('DELETE ALL saved locations? This cannot be undone.')) return;
+  locations = [];
+  save(); renderLocations();
+  showToast('All data cleared');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, error) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (error ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.classList.remove('show'); }, 2200);
+}
+
+// ─── INIT ────────────────────────────────────────────────────
+load();
+updateDimStyle();
+renderLocations();
+</script>
+</body>
+</html>
